@@ -13,7 +13,6 @@ const resumenResultado = document.getElementById('resumen_resultado');
 const botonReiniciar = document.getElementById('reiniciar_btn');
 const botonCambiarConfig = document.getElementById('cambiar_config_btn');
 
-// Variables del juego
 let preguntas = [];
 let preguntaActual = 0;
 let puntuacion = 0;
@@ -24,7 +23,6 @@ let tiempoRestante = 20;
 let temporizador;
 let configuracion = {};
 
-// Escuchar el formulario
 formularioConfiguracion.addEventListener('submit', async (e) => {
   e.preventDefault();
 
@@ -42,7 +40,6 @@ formularioConfiguracion.addEventListener('submit', async (e) => {
   iniciarJuego();
 });
 
-// Obtener preguntas desde API
 async function obtenerPreguntas() {
   const { cantidad, dificultad, categoria } = configuracion;
   let url = `https://opentdb.com/api.php?amount=${cantidad}&difficulty=${dificultad}&type=multiple`;
@@ -54,10 +51,17 @@ async function obtenerPreguntas() {
     const respuesta = await fetch(url);
     const datos = await respuesta.json();
     preguntas = datos.results;
+
+    if (preguntas.length === 0) {
+      textoPregunta.textContent = 'No se encontraron preguntas con esta configuración. Intenta cambiar los parámetros.';
+      return;
+    }
+
   } catch (error) {
     textoPregunta.textContent = 'Error al cargar preguntas.';
   }
 }
+
 
 function iniciarJuego() {
   preguntaActual = 0;
@@ -136,3 +140,29 @@ function actualizarTemporizador() {
   displayTemporizador.textContent = `Tiempo restante: ${tiempoRestante}s`;
   displayTemporizador.className = tiempoRestante <= 5 ? 'warning' : '';
 }
+function mostrarResultados() {
+  contenedorJuego.classList.add('hidden');
+  contenedorResultados.classList.remove('hidden');
+
+  const promedio = (tiempoTotal / preguntas.length).toFixed(2);
+  const porcentaje = ((respuestasCorrectas / preguntas.length) * 100).toFixed(1);
+
+  resumenResultado.innerHTML = `
+    Jugador: ${configuracion.nombre}<br>
+    Puntaje total: ${puntuacion}<br>
+    Respuestas correctas: ${respuestasCorrectas}/${preguntas.length}<br>
+    Porcentaje de aciertos: ${porcentaje}%<br>
+    Tiempo promedio por pregunta: ${promedio}s
+  `;
+}
+
+botonReiniciar.addEventListener('click', () => {
+  contenedorResultados.classList.add('hidden');
+  contenedorJuego.classList.remove('hidden');
+  iniciarJuego();
+});
+
+botonCambiarConfig.addEventListener('click', () => {
+  contenedorResultados.classList.add('hidden');
+  contenedorConfiguracion.classList.remove('hidden');
+});
