@@ -33,3 +33,48 @@ function startGame() {
   totalTime = 0;
   showQuestion();
 }
+function showQuestion() {
+  if (currentQuestion >= questions.length) return showResults();
+
+  const q = questions[currentQuestion];
+  const answers = [...q.incorrect_answers, q.correct_answer].sort(() => Math.random() - 0.5);
+
+  questionCounter.textContent = `Pregunta ${currentQuestion + 1} de ${questions.length}`;
+  questionText.innerHTML = decodeHTML(q.question);
+  answersContainer.innerHTML = '';
+  answers.forEach(answer => {
+    const btn = document.createElement('button');
+    btn.innerHTML = decodeHTML(answer);
+    btn.onclick = () => handleAnswer(answer === q.correct_answer);
+    answersContainer.appendChild(btn);
+  });
+
+  startTimer();
+  startTime = Date.now();
+}
+
+function handleAnswer(isCorrect) {
+  stopTimer();
+  totalTime += (Date.now() - startTime) / 1000;
+
+  const buttons = answersContainer.querySelectorAll('button');
+  buttons.forEach(btn => {
+    btn.disabled = true;
+    if (btn.innerHTML === decodeHTML(questions[currentQuestion].correct_answer)) {
+      btn.classList.add('correcto');
+    } else {
+      btn.classList.add('incorrecto');
+    }
+  });
+
+  if (isCorrect) {
+    score += 10;
+    correctAnswers++;
+  }
+
+  scoreDisplay.textContent = `Puntos: ${score}`;
+  setTimeout(() => {
+    currentQuestion++;
+    showQuestion();
+  }, 2000);
+}
