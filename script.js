@@ -1,101 +1,138 @@
-configForm.addEventListener('submit', async (e) => {
+const contenedorConfiguracion = document.getElementById('setup-container');
+const contenedorJuego = document.getElementById('game-container');
+const contenedorResultados = document.getElementById('results-container');
+
+const formularioConfiguracion = document.getElementById('config-form');
+const textoPregunta = document.getElementById('texto_pregunta');
+const contenedorRespuestas = document.getElementById('respuestas');
+const displayTemporizador = document.getElementById('temporizador');
+const contadorPregunta = document.getElementById('contador_pregunta');
+const displayPuntuacion = document.getElementById('puntuacion');
+const resumenResultado = document.getElementById('resumen_resultado');
+
+const botonReiniciar = document.getElementById('reiniciar_btn');
+const botonCambiarConfig = document.getElementById('cambiar_config_btn');
+
+// Variables del juego
+let preguntas = [];
+let preguntaActual = 0;
+let puntuacion = 0;
+let respuestasCorrectas = 0;
+let tiempoTotal = 0;
+let tiempoInicio;
+let tiempoRestante = 20;
+let temporizador;
+let configuracion = {};
+
+// Escuchar el formulario
+formularioConfiguracion.addEventListener('submit', async (e) => {
   e.preventDefault();
 
-  const name = document.getElementById('nombre del jugador').value.trim();
-  const count = parseInt(document.getElementById('cantidad de preguntas').value);
-  const difficulty = document.getElementById('dificultad').value;
-  const category = document.getElementById('categoría').value;
+  const nombre = document.getElementById('nombre_jugador').value.trim();
+  const cantidad = parseInt(document.getElementById('cantidad_preguntas').value);
+  const dificultad = document.getElementById('dificultad').value;
+  const categoria = document.getElementById('categoria').value;
 
-  config = { name, count, difficulty, category };
+  configuracion = { nombre, cantidad, dificultad, categoria };
 
-  setupContainer.classList.add('hidden');
-  gameContainer.classList.remove('hidden');
+  contenedorConfiguracion.classList.add('hidden');
+  contenedorJuego.classList.remove('hidden');
 
-  await fetchQuestions();
-  startGame();
+  await obtenerPreguntas();
+  iniciarJuego();
 });
 
-async function fetchQuestions() {
-  const { count, difficulty, category } = config;
-  let url = `https://opentdb.com/api.php?amount=${count}&difficulty=${difficulty}&type=multiple`;
-  if (category) url += `&category=${category}`;
+// Obtener preguntas desde API
+async function obtenerPreguntas() {
+  const { cantidad, dificultad, categoria } = configuracion;
+  let url = `https://opentdb.com/api.php?amount=${cantidad}&difficulty=${dificultad}&type=multiple`;
+  if (categoria) url += `&category=${categoria}`;
 
-  questionText.textContent = 'Cargando preguntas...';
-  const res = await fetch(url);
-  const data = await res.json();
-  questions = data.results;
+  textoPregunta.textContent = 'Cargando preguntas...';
+
+  try {
+    const respuesta = await fetch(url);
+    const datos = await respuesta.json();
+    preguntas = datos.results;
+  } catch (error) {
+    textoPregunta.textContent = 'Error al cargar preguntas.';
+  }
 }
 
-function startGame() {
-  currentQuestion = 0;
-  score = 0;
-  correctAnswers = 0;
-  totalTime = 0;
-  showQuestion();
+function iniciarJuego() {
+  preguntaActual = 0;
+  puntuacion = 0;
+  respuestasCorrectas = 0;
+  tiempoTotal = 0;
+  mostrarPregunta();
 }
-function showQuestion() {
-  if (currentQuestion >= questions.length) return showResults();
 
-  const q = questions[currentQuestion];
-  const answers = [...q.incorrect_answers, q.correct_answer].sort(() => Math.random() - 0.5);
+function mostrarPregunta() {
+  if (preguntaActual >= preguntas.length) return mostrarResultados();
 
-  questionCounter.textContent = `Pregunta ${currentQuestion + 1} de ${questions.length}`;
-  questionText.innerHTML = decodeHTML(q.question);
-  answersContainer.innerHTML = '';
-  answers.forEach(answer => {
-    const btn = document.createElement('button');
-    btn.innerHTML = decodeHTML(answer);
-    btn.onclick = () => handleAnswer(answer === q.correct_answer);
-    answersContainer.appendChild(btn);
+  const pregunta = preguntas[preguntaActual];
+  const opciones = [...pregunta.incorrect_answers, pregunta.correct_answer].sort(() => Math.random() - 0.5);
+
+  contadorPregunta.textContent = `Pregunta ${preguntaActual + 1} de ${preguntas.length}`;
+  textoPregunta.innerHTML = decodificarHTML(pregunta.question);
+  contenedorRespuestas.innerHTML = '';
+
+  opciones.forEach(opcion => {
+    const boton = document.createElement('button');
+    boton.innerHTML = decodificarHTML(opcion);
+    boton.addEventListener('click', () => manejarRespuesta(opcion === pregunta.correct_answer));
+    contenedorRespuestas.appendChild(boton);
   });
 
-  startTimer();
-  startTime = Date.now();
+  iniciarTemporizador();
+  tiempoInicio = Date.now();
 }
 
-function handleAnswer(isCorrect) {
-  stopTimer();
-  totalTime += (Date.now() - startTime) / 1000;
+function manejarRespuesta(esCorrecta) {
+  detenerTemporizador();
+  tiempoTotal += (Date.now() - tiempoInicio) / 1000;
 
-  const buttons = answersContainer.querySelectorAll('button');
-  buttons.forEach(btn => {
-    btn.disabled = true;
-    if (btn.innerHTML === decodeHTML(questions[currentQuestion].correct_answer)) {
-      btn.classList.add('correcto');
+  const botones = contenedorRespuestas.querySelectorAll('button');
+  botones.forEach(boton => {
+    boton.disabled = true;
+    if (boton.innerHTML === decodificarHTML(preguntas[preguntaActual].correct_answer)) {
+      boton.classList.add('correct');
     } else {
-      btn.classList.add('incorrecto');
+      boton.classList.add('incorrect');
     }
   });
 
-  if (isCorrect) {
-    score += 10;
-    correctAnswers++;
+  if (esCorrecta) {
+    puntuacion += 10;
+    respuestasCorrectas++;
   }
 
-  scoreDisplay.textContent = `Puntos: ${score}`;
+  displayPuntuacion.textContent = `Puntos: ${puntuacion}`;
+
   setTimeout(() => {
-    currentQuestion++;
-    showQuestion();
+    preguntaActual++;
+    mostrarPregunta();
   }, 2000);
 }
-function startTimer() {
-  remainingTime = 20;
-  updateTimer();
-  timer = setInterval(() => {
-    remainingTime--;
-    updateTimer();
-    if (remainingTime === 0) {
-      stopTimer();
-      handleAnswer(false);
+
+function iniciarTemporizador() {
+  tiempoRestante = 20;
+  actualizarTemporizador();
+  temporizador = setInterval(() => {
+    tiempoRestante--;
+    actualizarTemporizador();
+    if (tiempoRestante === 0) {
+      detenerTemporizador();
+      manejarRespuesta(false);
     }
   }, 1000);
 }
 
-function stopTimer() {
-  clearInterval(timer);
+function detenerTemporizador() {
+  clearInterval(temporizador);
 }
 
-function updateTimer() {
-  timerDisplay.textContent = `Tiempo restante: ${remainingTime}s`;
-  timerDisplay.className = remainingTime <= 5 ? 'warning' : '';
+function actualizarTemporizador() {
+  displayTemporizador.textContent = `Tiempo restante: ${tiempoRestante}s`;
+  displayTemporizador.className = tiempoRestante <= 5 ? 'warning' : '';
 }

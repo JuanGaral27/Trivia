@@ -11,15 +11,15 @@
     <h1>Juego de Trivia</h1>
     <form id="config-form">
       <label>Nombre del jugador:
-        <input type="text" id="player-name" required minlength="2" maxlength="20" />
+        <input type="text" id="nombre_jugador" required minlength="2" maxlength="20" />
       </label>
 
       <label>Cantidad de preguntas:
-        <input type="number" id="question-count" min="5" max="20" required />
+        <input type="number" id="cantidad_preguntas" min="5" max="20" required />
       </label>
 
       <label>Dificultad:
-        <select id="difficulty">
+        <select id="dificultad">
           <option value="easy">Fácil</option>
           <option value="medium">Medio</option>
           <option value="hard">Difícil</option>
@@ -27,7 +27,7 @@
       </label>
 
       <label>Categoría:
-        <select id="category">
+        <select id="categoria">
           <option value="">Mixta</option>
           <option value="9">Conocimiento General</option>
           <option value="18">Ciencia: Computación</option>
@@ -42,19 +42,19 @@
   </div>
 
   <div class="container hidden" id="game-container">
-    <h2 id="question-counter"></h2>
-    <p id="question-text"></p>
-    <div id="answers"></div>
-    <div id="timer"></div>
-    <div id="score-display"></div>
+    <h2 id="contador_pregunta"></h2>
+    <p id="texto_pregunta"></p>
+    <div id="respuestas"></div>
+    <div id="temporizador"></div>
+    <div id="puntuacion"></div>
   </div>
 
   <div class="container hidden" id="results-container">
     <h2>Resultados Finales</h2>
-    <p id="result-summary"></p>
+    <p id="resumen_resultado"></p>
     <div class="result-buttons">
-      <button id="restart-btn">Nuevo Juego</button>
-      <button id="change-settings-btn">Cambiar Configuración</button>
+      <button id="reiniciar_btn">Nuevo Juego</button>
+      <button id="cambiar_config_btn">Cambiar Configuración</button>
     </div>
   </div>
 
