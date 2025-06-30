@@ -78,3 +78,24 @@ function handleAnswer(isCorrect) {
     showQuestion();
   }, 2000);
 }
+function startTimer() {
+  remainingTime = 20;
+  updateTimer();
+  timer = setInterval(() => {
+    remainingTime--;
+    updateTimer();
+    if (remainingTime === 0) {
+      stopTimer();
+      handleAnswer(false);
+    }
+  }, 1000);
+}
+
+function stopTimer() {
+  clearInterval(timer);
+}
+
+function updateTimer() {
+  timerDisplay.textContent = `Tiempo restante: ${remainingTime}s`;
+  timerDisplay.className = remainingTime <= 5 ? 'warning' : '';
+}
