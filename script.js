@@ -1,167 +1,157 @@
-const contenedorConfiguracion = document.getElementById('setup-container');
-const contenedorJuego = document.getElementById('game-container');
-const contenedorResultados = document.getElementById('results-container');
+const setupContainer = document.getElementById('setup-container');
+const gameContainer = document.getElementById('game-container');
+const resultsContainer = document.getElementById('results-container');
+const configForm = document.getElementById('config-form');
+const questionText = document.getElementById('question-text');
+const answersContainer = document.getElementById('answers');
+const timerDisplay = document.getElementById('timer');
+const questionCounter = document.getElementById('question-counter');
+const scoreDisplay = document.getElementById('score-display');
+const resultSummary = document.getElementById('result-summary');
 
-const formularioConfiguracion = document.getElementById('config-form');
-const textoPregunta = document.getElementById('texto_pregunta');
-const contenedorRespuestas = document.getElementById('respuestas');
-const displayTemporizador = document.getElementById('temporizador');
-const contadorPregunta = document.getElementById('contador_pregunta');
-const displayPuntuacion = document.getElementById('puntuacion');
-const resumenResultado = document.getElementById('resumen_resultado');
+let questions = [], currentQuestion = 0, score = 0, correctAnswers = 0;
+let timer, remainingTime = 20;
+let startTime, totalTime = 0;
+let config = {};
 
-const botonReiniciar = document.getElementById('reiniciar_btn');
-const botonCambiarConfig = document.getElementById('cambiar_config_btn');
-
-let preguntas = [];
-let preguntaActual = 0;
-let puntuacion = 0;
-let respuestasCorrectas = 0;
-let tiempoTotal = 0;
-let tiempoInicio;
-let tiempoRestante = 20;
-let temporizador;
-let configuracion = {};
-
-formularioConfiguracion.addEventListener('submit', async (e) => {
+configForm.addEventListener('submit', async (e) => {
   e.preventDefault();
 
-  const nombre = document.getElementById('nombre_jugador').value.trim();
-  const cantidad = parseInt(document.getElementById('cantidad_preguntas').value);
-  const dificultad = document.getElementById('dificultad').value;
-  const categoria = document.getElementById('categoria').value;
+  const name = document.getElementById('player-name').value.trim();
+  const count = parseInt(document.getElementById('question-count').value);
+  const difficulty = document.getElementById('difficulty').value;
+  const category = document.getElementById('category').value;
 
-  configuracion = { nombre, cantidad, dificultad, categoria };
+  config = { name, count, difficulty, category };
 
-  contenedorConfiguracion.classList.add('hidden');
-  contenedorJuego.classList.remove('hidden');
+  setupContainer.classList.add('hidden');
+  gameContainer.classList.remove('hidden');
 
-  await obtenerPreguntas();
-  iniciarJuego();
+  await fetchQuestions();
+  startGame();
 });
 
-async function obtenerPreguntas() {
-  const url = `https://opentdb.com/api.php?amount=10`;
+async function fetchQuestions() {
+  const { count, difficulty, category } = config;
+  let url = `https://opentdb.com/api.php?amount=${count}&difficulty=${difficulty}&type=multiple&timestamp=${Date.now()}`;
+;
+  if (category) url += `&category=${category}`;
 
-  textoPregunta.textContent = 'Cargando preguntas...';
-
-  try {
-    const respuesta = await fetch(url);
-    const datos = await respuesta.json();
-    console.log("Respuesta de la API:", datos); // Para verificar en consola
-    preguntas = datos.results;
-
-    if (!preguntas || preguntas.length === 0) {
-      textoPregunta.textContent = 'No se encontraron preguntas.';
-    }
-  } catch (error) {
-    textoPregunta.textContent = 'Error al cargar preguntas.';
-    console.error("Error al obtener preguntas:", error);
-  }
+  questionText.textContent = 'Cargando preguntas...';
+  const res = await fetch(url);
+  const data = await res.json();
+  questions = data.results;
 }
 
-
-
-function iniciarJuego() {
-  preguntaActual = 0;
-  puntuacion = 0;
-  respuestasCorrectas = 0;
-  tiempoTotal = 0;
-  mostrarPregunta();
+function startGame() {
+  currentQuestion = 0;
+  score = 0;
+  correctAnswers = 0;
+  totalTime = 0;
+  showQuestion();
 }
 
-function mostrarPregunta() {
-  if (preguntaActual >= preguntas.length) return mostrarResultados();
+function showQuestion() {
+  if (currentQuestion >= questions.length) return showResults();
 
-  const pregunta = preguntas[preguntaActual];
-  const opciones = [...pregunta.incorrect_answers, pregunta.correct_answer].sort(() => Math.random() - 0.5);
+  const q = questions[currentQuestion];
+  const answers = [...q.incorrect_answers, q.correct_answer].sort(() => Math.random() - 0.5);
 
-  contadorPregunta.textContent = `Pregunta ${preguntaActual + 1} de ${preguntas.length}`;
-  textoPregunta.innerHTML = decodificarHTML(pregunta.question);
-  contenedorRespuestas.innerHTML = '';
-
-  opciones.forEach(opcion => {
-    const boton = document.createElement('button');
-    boton.innerHTML = decodificarHTML(opcion);
-    boton.addEventListener('click', () => manejarRespuesta(opcion === pregunta.correct_answer));
-    contenedorRespuestas.appendChild(boton);
+  questionCounter.textContent = `Pregunta ${currentQuestion + 1} de ${questions.length}`;
+  questionText.innerHTML = decodeHTML(q.question);
+  answersContainer.innerHTML = '';
+  answers.forEach(answer => {
+    const btn = document.createElement('button');
+    btn.innerHTML = decodeHTML(answer);
+    btn.onclick = () => handleAnswer(answer === q.correct_answer);
+    answersContainer.appendChild(btn);
   });
 
-  iniciarTemporizador();
-  tiempoInicio = Date.now();
+  startTimer();
+  startTime = Date.now();
 }
+document.getElementById('restart-btn').addEventListener('click', restartGame);
+document.getElementById('change-settings-btn').addEventListener('click', changeSettings);
 
-function manejarRespuesta(esCorrecta) {
-  detenerTemporizador();
-  tiempoTotal += (Date.now() - tiempoInicio) / 1000;
+function handleAnswer(isCorrect) {
+  stopTimer();
+  totalTime += (Date.now() - startTime) / 1000;
 
-  const botones = contenedorRespuestas.querySelectorAll('button');
-  botones.forEach(boton => {
-    boton.disabled = true;
-    if (boton.innerHTML === decodificarHTML(preguntas[preguntaActual].correct_answer)) {
-      boton.classList.add('correct');
+  const buttons = answersContainer.querySelectorAll('button');
+  buttons.forEach(btn => {
+    btn.disabled = true;
+    if (btn.innerHTML === decodeHTML(questions[currentQuestion].correct_answer)) {
+      btn.classList.add('correct');
     } else {
-      boton.classList.add('incorrect');
+      btn.classList.add('incorrect');
     }
   });
 
-  if (esCorrecta) {
-    puntuacion += 10;
-    respuestasCorrectas++;
+  if (isCorrect) {
+    score += 10;
+    correctAnswers++;
   }
 
-  displayPuntuacion.textContent = `Puntos: ${puntuacion}`;
-
+  scoreDisplay.textContent = `Puntos: ${score}`;
   setTimeout(() => {
-    preguntaActual++;
-    mostrarPregunta();
+    currentQuestion++;
+    showQuestion();
   }, 2000);
 }
 
-function iniciarTemporizador() {
-  tiempoRestante = 20;
-  actualizarTemporizador();
-  temporizador = setInterval(() => {
-    tiempoRestante--;
-    actualizarTemporizador();
-    if (tiempoRestante === 0) {
-      detenerTemporizador();
-      manejarRespuesta(false);
+function startTimer() {
+  remainingTime = 20;
+  updateTimer();
+  timer = setInterval(() => {
+    remainingTime--;
+    updateTimer();
+    if (remainingTime === 0) {
+      stopTimer();
+      handleAnswer(false);
     }
   }, 1000);
 }
 
-function detenerTemporizador() {
-  clearInterval(temporizador);
+function stopTimer() {
+  clearInterval(timer);
 }
 
-function actualizarTemporizador() {
-  displayTemporizador.textContent = `Tiempo restante: ${tiempoRestante}s`;
-  displayTemporizador.className = tiempoRestante <= 5 ? 'warning' : '';
+function updateTimer() {
+  timerDisplay.textContent = `Tiempo restante: ${remainingTime}s`;
+  timerDisplay.className = remainingTime <= 5 ? 'warning' : '';
 }
-function mostrarResultados() {
-  contenedorJuego.classList.add('hidden');
-  contenedorResultados.classList.remove('hidden');
 
-  const promedio = (tiempoTotal / preguntas.length).toFixed(2);
-  const porcentaje = ((respuestasCorrectas / preguntas.length) * 100).toFixed(1);
+function showResults() {
+  gameContainer.classList.add('hidden');
+  resultsContainer.classList.remove('hidden');
 
-  resumenResultado.innerHTML = `
-    Jugador: ${configuracion.nombre}<br>
-    Puntaje total: ${puntuacion}<br>
-    Respuestas correctas: ${respuestasCorrectas}/${preguntas.length}<br>
-    Porcentaje de aciertos: ${porcentaje}%<br>
-    Tiempo promedio por pregunta: ${promedio}s
+  const avgTime = (totalTime / questions.length).toFixed(2);
+  const percent = ((correctAnswers / questions.length) * 100).toFixed(1);
+
+  resultSummary.innerHTML = `
+    Jugador: ${config.name}<br>
+    Puntaje total: ${score}<br>
+    Respuestas correctas: ${correctAnswers}/${questions.length}<br>
+    Porcentaje de aciertos: ${percent}%<br>
+    Tiempo promedio por pregunta: ${avgTime}s
   `;
 }
 
-botonReiniciar.addEventListener('click', () => {
-  contenedorResultados.classList.add('hidden');
-  contenedorJuego.classList.remove('hidden');
-  iniciarJuego();
-});
+async function restartGame() {
+  resultsContainer.classList.add('hidden');
+  gameContainer.classList.remove('hidden');
+  await fetchQuestions(); // 🔄 Vuelve a traer preguntas nuevas
+  startGame();
+}
 
-botonCambiarConfig.addEventListener('click', () => {
-  contenedorResultados.classList.add('hidden');
-  contenedorConfiguracion.classList.remove('hidden');
-});
+
+function changeSettings() {
+  resultsContainer.classList.add('hidden');
+  setupContainer.classList.remove('hidden');
+}
+
+function decodeHTML(html) {
+  const txt = document.createElement('textarea');
+  txt.innerHTML = html;
+  return txt.value;
+}
