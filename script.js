@@ -41,26 +41,25 @@ formularioConfiguracion.addEventListener('submit', async (e) => {
 });
 
 async function obtenerPreguntas() {
-  const { cantidad, dificultad, categoria } = configuracion;
-  let url = `https://opentdb.com/api.php?amount=${cantidad}&difficulty=${dificultad}&type=multiple`;
-  if (categoria) url += `&category=${categoria}`;
+  const url = `https://opentdb.com/api.php?amount=10`;
 
   textoPregunta.textContent = 'Cargando preguntas...';
 
   try {
     const respuesta = await fetch(url);
     const datos = await respuesta.json();
+    console.log("Respuesta de la API:", datos); // Para verificar en consola
     preguntas = datos.results;
 
-    if (preguntas.length === 0) {
-      textoPregunta.textContent = 'No se encontraron preguntas con esta configuración. Intenta cambiar los parámetros.';
-      return;
+    if (!preguntas || preguntas.length === 0) {
+      textoPregunta.textContent = 'No se encontraron preguntas.';
     }
-
   } catch (error) {
     textoPregunta.textContent = 'Error al cargar preguntas.';
+    console.error("Error al obtener preguntas:", error);
   }
 }
+
 
 
 function iniciarJuego() {
